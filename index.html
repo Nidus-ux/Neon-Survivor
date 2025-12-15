@@ -167,6 +167,7 @@
                     <ul class="patch-list">
                         <li><b>ESTABILIDADE DE MOVIMENTO:</b> Corrigido um bug de input que travava o movimento do piloto após usar a manobra de esquiva [ESPAÇO].</li>
                         <li><b>REBALANCEAMENTO DE ENTIDADE:</b> Ameaça <span id="glitch-boss-name" style="color: #e74c3c; font-family: 'Press Start 2P';">N̷E̴O̵N̸ ̴A̶N̸G̴E̴L̴</span> teve seu dano base reduzido e seu primeiro surgimento foi ajustado para 5 minutos.</li>
+                        <li><b>OTIMIZAÇÃO DE NÚCLEO:</b> Renderização gráfica reescrita para garantir performance estável em simulações de alta densidade.</li>
                     </ul>
                 </div>
 
@@ -269,7 +270,8 @@
         speed: 5, maxHp: 100, hp: 100, regenRate: 0, 
         invulnDuration: 30, invulnTimer: 0, lifesteal: 0, lifestealChance: 0, healOnLevelUp: 0,
         damage: 20, atkSpeed: 40, cooldown: 0,
-        projectiles: 1, bulletSpeed: 11, bulletSize: 4, knockback: 1.5,
+        projectiles: 1, bulletSpeed: 11, bulletSize: 8,
+        knockback: 1.5,
         critChance: 0.05, critMult: 2, magnetRadius: 150, xpMultiplier: 1,
         dodge: 0, thorns: 0,
         xp: 0, nextLevelXp: 15, level: 1, kills: 0, history: [],

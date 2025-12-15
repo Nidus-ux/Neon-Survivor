@@ -79,17 +79,21 @@ const enemySystem = {
 
             if(e.flashTimer > 0) e.flashTimer--;
             
-            if (Math.hypot(playerRef.x - e.x, playerRef.y - e.y) < playerRef.size + e.size) {
-                if (playerRef.thorns > 0) { 
-                    e.hp -= playerRef.thorns; 
-                    e.flashTimer = 5; 
-                    if (e.hp <= 0) { 
-                        this.handleDeath(e, i); 
-                        continue; 
+            // Otimização de colisão: Verifica primeiro se está perto antes de calcular Math.hypot
+            // Box check rápido
+            if (Math.abs(playerRef.x - e.x) < 50 && Math.abs(playerRef.y - e.y) < 50) {
+                if (Math.hypot(playerRef.x - e.x, playerRef.y - e.y) < playerRef.size + e.size) {
+                    if (playerRef.thorns > 0) { 
+                        e.hp -= playerRef.thorns; 
+                        e.flashTimer = 5; 
+                        if (e.hp <= 0) { 
+                            this.handleDeath(e, i); 
+                            continue; 
+                        }
                     }
-                }
-                if (playerRef.invulnTimer === 0) {
-                    if (typeof takeDamage === 'function') takeDamage(10);
+                    if (playerRef.invulnTimer === 0) {
+                        if (typeof takeDamage === 'function') takeDamage(10);
+                    }
                 }
             }
         }
@@ -204,30 +208,47 @@ const enemySystem = {
     getClosest: function(position) {
         let closest = null;
         let minDist = Infinity;
+        // Otimização: Não checar inimigos muito longe
         this.enemies.forEach(e => { 
-            const dist = Math.hypot(position.x - e.x, position.y - e.y); 
-            if (dist < minDist) {
-                minDist = dist; 
-                closest = e;
-            } 
+            if (Math.abs(position.x - e.x) < 600 && Math.abs(position.y - e.y) < 600) {
+                const dist = Math.hypot(position.x - e.x, position.y - e.y); 
+                if (dist < minDist) {
+                    minDist = dist; 
+                    closest = e;
+                }
+            }
         });
         return closest;
     },
 
     draw: function(ctx, playerRef) {
+        // Culling: define a área visível da câmera (com margem)
+        const camX = typeof camera !== 'undefined' ? camera.x : 0;
+        const camY = typeof camera !== 'undefined' ? camera.y : 0;
+        const viewW = ctx.canvas.width;
+        const viewH = ctx.canvas.height;
+        const margin = 100;
+
         this.enemies.forEach(e => {
+            // OTIMIZAÇÃO: Não desenhar se estiver fora da tela
+            if (e.x < camX - margin || e.x > camX + viewW + margin ||
+                e.y < camY - margin || e.y > camY + viewH + margin) {
+                return;
+            }
+
             ctx.save();
             ctx.translate(e.x, e.y);
             ctx.rotate(e.angle); 
             
+            // ShadowBlur é MUITO pesado. Removemos para inimigos normais para ganhar FPS.
+            // Apenas ligamos se ele estiver levando dano (flash)
             if (e.flashTimer > 0) {
                 ctx.fillStyle = '#fff';
                 ctx.shadowBlur = 15; 
                 ctx.shadowColor = '#fff';
             } else {
                 ctx.fillStyle = e.color;
-                ctx.shadowBlur = 10;
-                ctx.shadowColor = e.color;
+                ctx.shadowBlur = 0; // Desativa glow padrão
                 ctx.strokeStyle = e.color;
             }
 
@@ -237,25 +258,17 @@ const enemySystem = {
                 ctx.arc(0, 0, e.size, 0, Math.PI * 2);
                 ctx.fill();
                 
+                // Detalhe simples sem stroke pesado
                 ctx.fillStyle = '#000';
                 ctx.beginPath(); ctx.arc(6, -5, 2.5, 0, Math.PI*2); ctx.fill(); 
                 ctx.beginPath(); ctx.arc(6, 5, 2.5, 0, Math.PI*2); ctx.fill();
-                
-                ctx.rotate(-e.angle + (Date.now() * 0.005));
-                ctx.strokeStyle = e.color;
-                ctx.lineWidth = 1.5;
-                ctx.beginPath(); ctx.arc(0, 0, e.size + 4, 0, Math.PI * 1.5); ctx.stroke();
             } 
             else if (e.type === 'bastion') {
                 ctx.rect(-e.size, -e.size, e.size*2, e.size*2);
                 ctx.fill();
                 
-                ctx.strokeStyle = '#000'; ctx.lineWidth = 4;
-                ctx.beginPath(); ctx.rect(-e.size + 4, -e.size + 4, e.size*2 - 8, e.size*2 - 8); ctx.stroke();
-                
-                ctx.fillStyle = '#000';
-                ctx.beginPath(); ctx.rect(e.size - 8, -12, 6, 8); ctx.fill();
-                ctx.beginPath(); ctx.rect(e.size - 8, 4, 6, 8); ctx.fill();
+                ctx.strokeStyle = '#000'; ctx.lineWidth = 3;
+                ctx.strokeRect(-e.size + 4, -e.size + 4, e.size*2 - 8, e.size*2 - 8);
             } 
             else if (e.type === 'dart') {
                 ctx.moveTo(e.size + 5, 0); 
@@ -267,7 +280,6 @@ const enemySystem = {
                 
                 if (e.state === 1) ctx.fillStyle = '#fff';
                 else ctx.fillStyle = '#000';
-                
                 ctx.beginPath(); ctx.arc(5, 0, 4, 0, Math.PI*2); ctx.fill();
             }
             else if (e.type === 'fragment') {
@@ -277,37 +289,27 @@ const enemySystem = {
                 ctx.lineTo(-e.size * 0.5, e.size * 0.6);
                 ctx.closePath();
                 ctx.fill();
-                
-                ctx.fillStyle = '#000';
-                ctx.beginPath(); ctx.arc(0, -3, 1.5, 0, Math.PI*2); ctx.fill();
-                ctx.beginPath(); ctx.arc(0, 3, 1.5, 0, Math.PI*2); ctx.fill();
             }
             else if (e.type === 'weaver') {
-                const r = e.size;
-                ctx.moveTo(r, 0);
-                for (let k = 1; k <= 6; k++) {
-                    ctx.lineTo(r * Math.cos(k * 2 * Math.PI / 6), r * Math.sin(k * 2 * Math.PI / 6));
+                // Desenho simplificado para performance
+                ctx.beginPath();
+                for (let k = 0; k < 6; k++) {
+                    const ang = k * Math.PI / 3;
+                    ctx.lineTo(Math.cos(ang) * e.size, Math.sin(ang) * e.size);
                 }
                 ctx.closePath();
                 ctx.fill();
                 
                 ctx.fillStyle = '#000';
-                ctx.beginPath(); ctx.arc(8, 0, 3, 0, Math.PI*2); ctx.fill();
-                ctx.beginPath(); ctx.arc(4, -8, 3, 0, Math.PI*2); ctx.fill();
-                ctx.beginPath(); ctx.arc(4, 8, 3, 0, Math.PI*2); ctx.fill();
+                ctx.beginPath(); ctx.arc(0, 0, 6, 0, Math.PI*2); ctx.fill();
             }
             else if (e.type === 'nova') {
                 const r = e.currentSize || e.size;
                 ctx.moveTo(r, 0);
-                ctx.quadraticCurveTo(5, 5, 0, r);
-                ctx.quadraticCurveTo(-5, 5, -r, 0);
-                ctx.quadraticCurveTo(-5, -5, 0, -r);
-                ctx.quadraticCurveTo(5, -5, r, 0);
+                ctx.lineTo(0, 5); ctx.lineTo(-r, 0); ctx.lineTo(0, -5);
                 ctx.fill();
-                
-                const flicker = Math.random() > 0.5 ? '#fff' : '#000';
-                ctx.fillStyle = flicker;
-                ctx.beginPath(); ctx.arc(0, 0, 6, 0, Math.PI*2); ctx.fill();
+                ctx.moveTo(0, r); ctx.lineTo(5, 0); ctx.lineTo(0, -r); ctx.lineTo(-5, 0);
+                ctx.fill();
             }
 
             ctx.restore();

@@ -234,7 +234,7 @@ function updateBoss() {
     if (bossSystem.genericTimer > 30) { 
         const angleToPlayer = Math.atan2(player.y - bossSystem.y, player.x - bossSystem.x);
         const speed = 4;
-        spawnBossBullet(bossSystem.x, bossSystem.y, Math.cos(angleToPlayer) * speed, Math.sin(angleToPlayer) * speed, 7, '#fff', 250);
+        spawnBossBullet(bossSystem.x, bossSystem.y, Math.cos(angleToPlayer) * speed, Math.sin(angleToPlayer) * speed, 12, '#fff', 250);
         if(typeof sfx !== 'undefined' && sfx.bossShoot) sfx.bossShoot();
         bossSystem.genericTimer = 0;
     }
@@ -257,24 +257,24 @@ function performBossAttack() {
     
     switch(bossSystem.currentAttack) {
         case 0: 
-            for(let i=-6; i<=6; i++) spawnBossBullet(cx + i*40, cy, i * 0.6, 5, 12, '#ff00ff');
+            for(let i=-6; i<=6; i++) spawnBossBullet(cx + i*40, cy, i * 0.6, 5, 18, '#ff00ff');
             break;
         case 1: 
-            for(let i=0; i<15; i++) spawnBossBullet(camera.x + (canvas.width/15)*i + Math.random()*20, camera.y - 50, 0, 7, 8, '#00ffff');
+            for(let i=0; i<15; i++) spawnBossBullet(camera.x + (canvas.width/15)*i + Math.random()*20, camera.y - 50, 0, 7, 12, '#00ffff');
             break;
         case 2: 
             for(let i=0; i<20; i++) {
                 const angle = (Math.PI / 10) * i;
-                spawnBossBullet(cx, cy, Math.cos(angle)*6, Math.sin(angle)*6, 9, '#e74c3c');
+                spawnBossBullet(cx, cy, Math.cos(angle)*6, Math.sin(angle)*6, 14, '#e74c3c');
             }
             break;
         case 3: 
             for(let i=0; i<3; i++) {
-                setTimeout(() => spawnBossBullet(cx, cy, (player.x - cx)*0.06, (player.y - cy)*0.06, 30, '#fff', 300), i * 300);
+                setTimeout(() => spawnBossBullet(cx, cy, (player.x - cx)*0.06, (player.y - cy)*0.06, 45, '#fff', 300), i * 300);
             }
             break;
         case 4: 
-            for(let i=0; i<30; i++) spawnBossBullet(cx, cy, (Math.random()-0.5)*18, (Math.random()*0.5 + 0.5)*10, 6, '#ffff00');
+            for(let i=0; i<30; i++) spawnBossBullet(cx, cy, (Math.random()-0.5)*18, (Math.random()*0.5 + 0.5)*10, 10, '#ffff00');
             break;
     }
     if(typeof sfx !== 'undefined' && sfx.bossSpecial) sfx.bossSpecial();
