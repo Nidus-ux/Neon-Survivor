@@ -33,6 +33,7 @@
         #uiTime { color: #fff; font-size: 16px; margin-top: 5px; display: block; text-align: right; font-family: 'Press Start 2P', cursive; }
         .timer-frozen { color: #e74c3c !important; text-shadow: 2px 0 #fff, -2px 0 #fff !important; animation: glitch 0.2s infinite !important; }
         #pause-indicator { display: none; position: absolute; top: 20px; right: 20px; color: yellow; z-index: 15; font-size: 12px; animation: flicker 2s infinite; font-family: 'Press Start 2P', cursive; }
+        #fps-counter { position: absolute; bottom: 10px; right: 10px; font-size: 12px; color: #0f0; text-shadow: 1px 1px 0 #000; z-index: 100; display: none; }
         @media (max-width: 900px) and (orientation: landscape) {
             #hud { width: 40%; top: 10px; left: 10px; max-width: 250px; }
             .hud-text { font-size: 8px; }
@@ -125,6 +126,7 @@
     </style>
 </head>
 <body>
+    <div id="fps-counter">0 FPS</div>
 
     <div id="damage-overlay"></div>
     <div id="pause-indicator">PAUSADO [ESC]</div>
@@ -233,6 +235,12 @@
     const shockwaves = [], backgroundParticles = [];
     const keys = {};
 
+    const MAX_PARTICLES = 500;
+    let lastTime = 0;
+    let frameCount = 0;
+    const fpsCounter = document.getElementById('fps-counter');
+    let isFpsVisible = false;
+
     for(let i=0; i<150; i++) {
         let type = 'star';
         let size = Math.random()*2;
@@ -286,6 +294,10 @@
         if(e.key === 'Escape') togglePause();
         if(e.key === '/' && gameState === 'PLAYING') seconds = 290; 
         if(e.key === '>' && gameState === 'PLAYING' && bossSystem.active) bossSystem.hp = 0;
+        if (e.code === 'Numpad1') {
+            isFpsVisible = !isFpsVisible;
+            fpsCounter.style.display = isFpsVisible ? 'block' : 'none';
+        }
     });
     window.addEventListener('keyup', e => keys[e.key] = false);
 
@@ -490,7 +502,11 @@
                 continue;
             }
 
-            if(frames % 2 === 0) particles.push({x:b.x, y:b.y, vx:0, vy:0, life:10, color: '#f1c40f', size:2, isStatic:true});
+            if(frames % 5 === 0) { 
+                if (particles.length < MAX_PARTICLES) {
+                    particles.push({x:b.x, y:b.y, vx:0, vy:0, life:10, color: '#f1c40f', size:2, isStatic:true});
+                }
+            }
             if (b.life <= 0) { bullets.splice(i, 1); continue; }
             
             let hit = false;
@@ -504,8 +520,12 @@
             } else {
                 for (let j = enemySystem.enemies.length - 1; j >= 0; j--) {
                     let e = enemySystem.enemies[j];
+                    
                     if (e.type === 'bastion' && Math.abs(b.x - e.x) < e.size && Math.abs(b.y - e.y) < e.size) {
                         hit = true; 
+                        e.hp -= b.damage;
+                        e.flashTimer = 2;
+                        if (e.hp <= 0) { enemySystem.handleDeath(e, j); }
                         break; 
                     }
                     if (Math.hypot(b.x - e.x, b.y - e.y) < e.size + b.size) {
@@ -549,7 +569,12 @@
         updateHUD();
     }
 
-    function spawnParticles(x, y, c, n) { for(let i=0; i<n; i++) particles.push({x,y,color:c, vx:(Math.random()-.5)*8, vy:(Math.random()-.5)*8, life:30+Math.random()*20, size:Math.random()*4}); }
+    function spawnParticles(x, y, c, n) { 
+        if (particles.length >= MAX_PARTICLES) return;
+        for(let i=0; i<n; i++) {
+             particles.push({x,y,color:c, vx:(Math.random()-.5)*8, vy:(Math.random()-.5)*8, life:30+Math.random()*20, size:Math.random()*4}); 
+        }
+    }
     function spawnShockwave(x, y, color) { shockwaves.push({x, y, radius: 10, opacity: 1, color: color}); }
     function updateParticles() { for (let i = particles.length-1; i>=0; i--) { let p = particles[i]; if(!p.isStatic){p.x+=p.vx; p.y+=p.vy;} p.life--; p.size *= 0.92; if(p.life<=0) particles.splice(i,1); } }
     function updateShockwaves() { for (let i = shockwaves.length-1; i>=0; i--) { let s = shockwaves[i]; s.radius += 2; s.opacity -= 0.05; if(s.opacity <= 0) shockwaves.splice(i, 1); } }
@@ -719,7 +744,13 @@
 
         shockwaves.forEach(s => { ctx.lineWidth = 2; ctx.strokeStyle = s.color; ctx.globalAlpha = s.opacity; ctx.beginPath(); ctx.arc(s.x, s.y, s.radius, 0, Math.PI*2); ctx.stroke(); ctx.globalAlpha = 1; });
         gems.forEach(g => { ctx.shadowBlur=10; ctx.shadowColor='#3498db'; ctx.fillStyle='#3498db'; ctx.beginPath(); ctx.arc(g.x, g.y, g.size + Math.sin(frames*0.1), 0, Math.PI*2); ctx.fill(); ctx.shadowBlur=0; });
-        particles.forEach(p => { ctx.fillStyle=p.color; ctx.globalAlpha=p.life/30; ctx.beginPath(); ctx.arc(p.x, p.y, p.size, 0, Math.PI*2); ctx.fill(); ctx.globalAlpha=1; });
+        
+        particles.forEach(p => { 
+            ctx.fillStyle=p.color; 
+            ctx.globalAlpha=p.life/30; 
+            ctx.fillRect(p.x - p.size/2, p.y - p.size/2, p.size, p.size);
+            ctx.globalAlpha=1; 
+        });
         
         enemySystem.draw(ctx, player);
 
@@ -756,13 +787,24 @@
         drawBuffFX(ctx, player);
 
         ctx.strokeStyle='rgba(255,255,255,0.05)'; ctx.setLineDash([5, 15]); ctx.beginPath(); ctx.arc(player.x, player.y, player.magnetRadius, 0, Math.PI*2); ctx.stroke(); ctx.setLineDash([]);
+        
         bullets.forEach(b => { 
-            ctx.shadowBlur=15; ctx.shadowColor=b.color || '#ffff00'; ctx.fillStyle= b.color || '#fff'; 
-            ctx.beginPath(); ctx.arc(b.x, b.y, b.size, 0, Math.PI*2); ctx.fill(); ctx.shadowBlur=0; 
+            ctx.fillStyle= b.color || '#fff'; 
+            ctx.fillRect(b.x - b.size / 2, b.y - b.size / 2, b.size, b.size);
         });
         floatingTexts.forEach(t => { ctx.fillStyle=t.color; ctx.font=`10px 'Press Start 2P'`; ctx.fillText(t.text, t.x, t.y - (40 - t.life)); });
         
         ctx.restore();
+
+        const currentTime = performance.now();
+        const deltaTime = currentTime - lastTime;
+        frameCount++;
+        if (deltaTime >= 1000) {
+            const fps = Math.round((frameCount * 1000) / deltaTime);
+            fpsCounter.textContent = `${fps} FPS`;
+            frameCount = 0;
+            lastTime = currentTime;
+        }
     }
     
     function loop() {
