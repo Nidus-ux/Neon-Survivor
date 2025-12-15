@@ -1,0 +1,10 @@
+{
+  "name": "Neon Survivor",
+  "short_name": "Neon",
+  "start_url": "./index.html",
+  "display": "fullscreen",
+  "background_color": "#050011",
+  "theme_color": "#050011",
+  "orientation": "landscape",
+  "icons": []
+}
