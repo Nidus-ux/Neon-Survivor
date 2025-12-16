@@ -43,7 +43,9 @@ const RANDOM_EVENTS = [
         tick: () => {
             if(frames % 8 === 0) {
                 const rx = camera.x + Math.random() * canvas.width;
-                bullets.push({ x: rx, y: camera.y - 100, vx: (Math.random()-0.5)*3, vy: 12, life: 250, damage: 10, isEnemy: true, size: 8, color: '#f1c40f' });
+                if(typeof bulletSystem !== 'undefined') {
+                    bulletSystem.spawn(rx, camera.y - 100, (Math.random()-0.5)*3, 12, 250, 10, true, 8, '#f1c40f');
+                }
             }
         },
         onEnd: () => {}
@@ -68,7 +70,9 @@ const RANDOM_EVENTS = [
         tick: () => {
             if(frames % 25 === 0) {
                 enemySystem.enemies.forEach(e => {
-                    bullets.push({ x: e.x, y: e.y, vx: (player.x - e.x)*0.015, vy: (player.y - e.y)*0.015, life: 120, damage: 8, isEnemy: true, size: 5, color: '#e74c3c' });
+                    if(typeof bulletSystem !== 'undefined') {
+                        bulletSystem.spawn(e.x, e.y, (player.x - e.x)*0.015, (player.y - e.y)*0.015, 120, 8, true, 5, '#e74c3c');
+                    }
                 });
             }
         },
@@ -132,28 +136,28 @@ function startBossSequence(hp) {
     if(typeof sfx !== 'undefined' && sfx.bossIntro) sfx.bossIntro(); 
 }
 
-function updateBoss() {
+function updateBoss(timeScale = 1) {
     if (bossSystem.introActive) {
-        bossSystem.introTimer++;
+        bossSystem.introTimer += 1 * timeScale;
         
-        eventSystem.transitionProgress = Math.min(1, bossSystem.introTimer / 500);
+        eventSystem.transitionProgress = Math.min(1, bossSystem.introTimer / 250);
 
         if (eventSystem.scrollSpeed < 2 && bossSystem.introTimer > 100) {
-            eventSystem.scrollSpeed += 0.005;
+            eventSystem.scrollSpeed += 0.005 * timeScale;
         }
 
         bossSystem.x = player.x;
         bossSystem.y = camera.y - 350; 
 
-        if (bossSystem.introTimer > 600 && bossSystem.introPhase === 0) {
+        if (bossSystem.introTimer > 300 && bossSystem.introPhase === 0) {
             bossSystem.introPhase = 1;
             bossSystem.spawnAnim = 120;
             if(typeof sfx !== 'undefined' && sfx.bossCharging) sfx.bossCharging(2.0);
         }
 
         if (bossSystem.introPhase === 1) {
-            bossSystem.spawnAnim--;
-            eventSystem.scrollSpeed = Math.min(5, eventSystem.scrollSpeed + 0.05);
+            bossSystem.spawnAnim -= 1 * timeScale;
+            eventSystem.scrollSpeed = Math.min(5, eventSystem.scrollSpeed + 0.05 * timeScale);
 
             const centerX = player.x;
             const centerY = camera.y + 120;
@@ -163,7 +167,7 @@ function updateBoss() {
                     const angle = Math.random() * Math.PI * 2;
                     const dist = 300 + Math.random() * 100;
                     const color = Math.random() > 0.5 ? '#00ffff' : '#ff00ff';
-                    particles.push({ x: centerX + Math.cos(angle) * dist, y: centerY + Math.sin(angle) * dist, vx: -Math.cos(angle) * 12, vy: -Math.sin(angle) * 12, life: 30, size: 3 + Math.random() * 3, color: color });
+                    particleSystem.spawn(centerX + Math.cos(angle) * dist, centerY + Math.sin(angle) * dist, color, 3 + Math.random() * 3, 30, -Math.cos(angle) * 12, -Math.sin(angle) * 12, false);
                 }
             }
 
@@ -182,7 +186,7 @@ function updateBoss() {
                 for(let k=0; k<100; k++) {
                     const ang = Math.random() * Math.PI * 2;
                     const spd = 5 + Math.random() * 10;
-                    particles.push({ x: bossSystem.x, y: bossSystem.y, vx: Math.cos(ang) * spd, vy: Math.sin(ang) * spd, color: '#fff', life: 60, size: 3 });
+                    particleSystem.spawn(bossSystem.x, bossSystem.y, '#fff', 3, 60, Math.cos(ang) * spd, Math.sin(ang) * spd, false);
                 }
                 
                 if(typeof sfx !== 'undefined' && sfx.bossSpawn) sfx.bossSpawn();
@@ -193,13 +197,13 @@ function updateBoss() {
     }
 
     if (bossSystem.deathSequenceActive) {
-        bossSystem.deathTimer++;
+        bossSystem.deathTimer += 1 * timeScale;
         const deathDuration = 300; 
 
         eventSystem.transitionProgress = Math.max(0, 1 - (bossSystem.deathTimer / deathDuration));
         eventSystem.scrollSpeed *= 0.98;
 
-        if (bossSystem.deathTimer % 5 === 0) {
+        if (Math.floor(bossSystem.deathTimer) % 5 === 0) {
             const rx = bossSystem.x + (Math.random() - 0.5) * bossSystem.width;
             const ry = bossSystem.y + (Math.random() - 0.5) * bossSystem.height;
             const color = Math.random() > 0.5 ? '#ff00ff' : '#00ffff';
@@ -216,30 +220,30 @@ function updateBoss() {
 
     if (!bossSystem.active) return;
 
-    if (bossSystem.invulnTimer > 0) bossSystem.invulnTimer--;
+    if (bossSystem.invulnTimer > 0) bossSystem.invulnTimer -= 1 * timeScale;
 
-    eventSystem.scrollSpeed = Math.min(25, eventSystem.scrollSpeed + 0.2);
+    eventSystem.scrollSpeed = Math.min(25, eventSystem.scrollSpeed + 0.2 * timeScale);
 
-    if (bossSystem.flash > 0) bossSystem.flash--;
+    if (bossSystem.flash > 0) bossSystem.flash -= 1 * timeScale;
 
-    bossSystem.hands.angle += 0.04;
+    bossSystem.hands.angle += 0.04 * timeScale;
     bossSystem.hands.offset = Math.sin(bossSystem.hands.angle) * 50;
     
-    bossSystem.x += (player.x - bossSystem.x) * 0.015; 
+    bossSystem.x += (player.x - bossSystem.x) * 0.015 * timeScale; 
     
     const targetY = camera.y + 120; 
-    bossSystem.y += (targetY - bossSystem.y) * 0.1;
+    bossSystem.y += (targetY - bossSystem.y) * 0.1 * timeScale;
 
-    bossSystem.genericTimer++;
+    bossSystem.genericTimer += 1 * timeScale;
     if (bossSystem.genericTimer > 30) { 
         const angleToPlayer = Math.atan2(player.y - bossSystem.y, player.x - bossSystem.x);
-        const speed = 4;
+        const speed = 6;
         spawnBossBullet(bossSystem.x, bossSystem.y, Math.cos(angleToPlayer) * speed, Math.sin(angleToPlayer) * speed, 12, '#fff', 250);
         if(typeof sfx !== 'undefined' && sfx.bossShoot) sfx.bossShoot();
         bossSystem.genericTimer = 0;
     }
 
-    bossSystem.attackTimer++;
+    bossSystem.attackTimer += 1 * timeScale;
     if (bossSystem.attackTimer > 240) { 
         performBossAttack();
         bossSystem.attackTimer = 0;
@@ -257,31 +261,33 @@ function performBossAttack() {
     
     switch(bossSystem.currentAttack) {
         case 0: 
-            for(let i=-6; i<=6; i++) spawnBossBullet(cx + i*40, cy, i * 0.6, 5, 18, '#ff00ff');
+            for(let i=-6; i<=6; i++) spawnBossBullet(cx + i*40, cy, i * 0.6, 7, 18, '#ff00ff');
             break;
         case 1: 
-            for(let i=0; i<15; i++) spawnBossBullet(camera.x + (canvas.width/15)*i + Math.random()*20, camera.y - 50, 0, 7, 12, '#00ffff');
+            for(let i=0; i<15; i++) spawnBossBullet(camera.x + (canvas.width/15)*i + Math.random()*20, camera.y - 50, 0, 9, 12, '#00ffff');
             break;
         case 2: 
             for(let i=0; i<20; i++) {
                 const angle = (Math.PI / 10) * i;
-                spawnBossBullet(cx, cy, Math.cos(angle)*6, Math.sin(angle)*6, 14, '#e74c3c');
+                spawnBossBullet(cx, cy, Math.cos(angle)*8, Math.sin(angle)*8, 14, '#e74c3c');
             }
             break;
         case 3: 
             for(let i=0; i<3; i++) {
-                setTimeout(() => spawnBossBullet(cx, cy, (player.x - cx)*0.06, (player.y - cy)*0.06, 45, '#fff', 300), i * 300);
+                setTimeout(() => spawnBossBullet(cx, cy, (player.x - cx)*0.08, (player.y - cy)*0.08, 45, '#fff', 300), i * 300);
             }
             break;
         case 4: 
-            for(let i=0; i<30; i++) spawnBossBullet(cx, cy, (Math.random()-0.5)*18, (Math.random()*0.5 + 0.5)*10, 10, '#ffff00');
+            for(let i=0; i<30; i++) spawnBossBullet(cx, cy, (Math.random()-0.5)*18, (Math.random()*0.5 + 0.5)*12, 10, '#ffff00');
             break;
     }
     if(typeof sfx !== 'undefined' && sfx.bossSpecial) sfx.bossSpecial();
 }
 
 function spawnBossBullet(x, y, vx, vy, size, color, life=300) {
-    bullets.push({ x: x, y: y, vx: vx, vy: vy, life: life, damage: 15, isEnemy: true, size: size, color: color });
+    if(typeof bulletSystem !== 'undefined') {
+        bulletSystem.spawn(x, y, vx, vy, life, 15, true, size, color);
+    }
 }
 
 function startBossDeathSequence() {
@@ -335,7 +341,7 @@ function drawBoss(ctx) {
             ctx.shadowBlur = 40; ctx.shadowColor = '#ff00ff';
             
             const text = "NEON ANGEL";
-            const charsToShow = Math.floor((time / 450) * text.length); 
+            const charsToShow = Math.floor((time / 150) * text.length);
             
             let displayT = text.substring(0, charsToShow);
             for(let i=charsToShow; i<text.length; i++) {

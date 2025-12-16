@@ -2,16 +2,16 @@ const enemySystem = {
     enemies: [],
 
     ENEMY_TYPES: {
-        STANDARD: { id: 'standard', weight: 100, hpMult: 1, speedMult: 1, xp: 10 },
+        STANDARD: { id: 'standard', weight: 100, hpMult: 1, speedMult: 0.9, xp: 10 },
         BASTION:  { id: 'bastion',  weight: 25,  hpMult: 3, speedMult: 0.4, xp: 30 },
         DART:     { id: 'dart',     weight: 20,  hpMult: 0.8, speedMult: 0.75, xp: 20 },
         FRAGMENT: { id: 'fragment', weight: 40,  hpMult: 0.3, speedMult: 1.6, xp: 8 },
-        WEAVER:   { id: 'weaver',   weight: 15,  hpMult: 1.5, speedMult: 0.7, xp: 25 },
+        WEAVER:   { id: 'weaver',   weight: 15,  hpMult: 1.3, speedMult: 0.7, xp: 25 },
         NOVA:     { id: 'nova',     weight: 15,  hpMult: 1.2, speedMult: 0.85, xp: 25 }
     },
 
     spawnController: function(difficulty, playerRef, canvas) {
-        if (typeof bossSystem !== 'undefined' && (bossSystem.active || bossSystem.introActive)) return;
+        if (typeof bossSystem !== 'undefined' && (bossSystem.active || bossSystem.introActive || bossSystem.deathSequenceActive)) return;
         
         let rate = Math.floor(60 / (difficulty * 0.6));
         if (rate < 8) rate = 8;
@@ -51,7 +51,7 @@ const enemySystem = {
             type: selectedType.id,
             x: ex, y: ey, 
             size: 15, 
-            speed: ((1 + Math.random()) * Math.min(2.5, difficulty * 0.65)) * selectedType.speedMult, 
+            speed: (((1 + Math.random()) * Math.min(2.5, difficulty * 0.65)) + 1.5) * selectedType.speedMult, 
             maxHp: hp, 
             hp: hp, 
             color: difficulty > 3.5 ? '#9b59b6' : '#e74c3c', 
@@ -64,23 +64,21 @@ const enemySystem = {
 
         if (enemy.type === 'bastion') { enemy.size = 28; enemy.color = '#3498db'; }
         if (enemy.type === 'dart')    { enemy.size = 20; enemy.color = '#f1c40f'; }
-        if (enemy.type === 'fragment'){ enemy.size = 10; enemy.color = '#00ffff'; }
-        if (enemy.type === 'weaver')  { enemy.size = 22; enemy.color = '#2ecc71'; }
+        if (enemy.type === 'fragment'){ enemy.size = 10; enemy.color = '#7bff00ff'; }
+        if (enemy.type === 'weaver')  { enemy.size = 22; enemy.color = '#3da4f8ff'; }
         if (enemy.type === 'nova')    { enemy.size = 24; enemy.color = '#ff0055'; }
 
         this.enemies.push(enemy);
     },
 
-    update: function(playerRef) {
+    update: function(playerRef, timeScale = 1) {
         for(let i = this.enemies.length - 1; i >= 0; i--) {
             let e = this.enemies[i];
             
-            this.moveEnemy(e, playerRef);
+            this.moveEnemy(e, playerRef, timeScale);
 
-            if(e.flashTimer > 0) e.flashTimer--;
+            if(e.flashTimer > 0) e.flashTimer -= 1 * timeScale;
             
-            // Otimização de colisão: Verifica primeiro se está perto antes de calcular Math.hypot
-            // Box check rápido
             if (Math.abs(playerRef.x - e.x) < 50 && Math.abs(playerRef.y - e.y) < 50) {
                 if (Math.hypot(playerRef.x - e.x, playerRef.y - e.y) < playerRef.size + e.size) {
                     if (playerRef.thorns > 0) { 
@@ -91,7 +89,7 @@ const enemySystem = {
                             continue; 
                         }
                     }
-                    if (playerRef.invulnTimer === 0) {
+                    if (playerRef.invulnTimer <= 0) {
                         if (typeof takeDamage === 'function') takeDamage(10);
                     }
                 }
@@ -99,30 +97,30 @@ const enemySystem = {
         }
     },
 
-    moveEnemy: function(e, p) {
+    moveEnemy: function(e, p, timeScale) {
         let moveDir = (typeof window.fearMode !== 'undefined' && window.fearMode) ? -1 : 1;
         const angleToPlayer = Math.atan2(p.y - e.y, p.x - e.x); 
         
         switch (e.type) {
             case 'standard':
-                e.x += Math.cos(angleToPlayer) * e.speed * moveDir;
-                e.y += Math.sin(angleToPlayer) * e.speed * moveDir;
+                e.x += Math.cos(angleToPlayer) * e.speed * moveDir * timeScale;
+                e.y += Math.sin(angleToPlayer) * e.speed * moveDir * timeScale;
                 e.angle = angleToPlayer;
                 break;
 
             case 'bastion':
-                e.x += Math.cos(angleToPlayer) * e.speed;
-                e.y += Math.sin(angleToPlayer) * e.speed;
+                e.x += Math.cos(angleToPlayer) * e.speed * timeScale;
+                e.y += Math.sin(angleToPlayer) * e.speed * timeScale;
                 e.angle = angleToPlayer;
                 break;
 
             case 'dart':
-                e.timer++;
+                e.timer += 1 * timeScale;
                 if (e.state === 0) {
                     const dist = Math.hypot(p.x - e.x, p.y - e.y);
                     if (dist > 300) {
-                        e.x += Math.cos(angleToPlayer) * e.speed * 1.5 * moveDir;
-                        e.y += Math.sin(angleToPlayer) * e.speed * 1.5 * moveDir;
+                        e.x += Math.cos(angleToPlayer) * e.speed * 1.5 * moveDir * timeScale;
+                        e.y += Math.sin(angleToPlayer) * e.speed * 1.5 * moveDir * timeScale;
                         e.angle = angleToPlayer;
                     } else {
                         e.state = 1; 
@@ -132,56 +130,53 @@ const enemySystem = {
                 else if (e.state === 1) {
                     e.angle = angleToPlayer; 
                     if (e.timer > 60) { 
-                        if (typeof bullets !== 'undefined') {
-                            bullets.push({ 
-                                x: e.x, y: e.y, 
-                                vx: Math.cos(angleToPlayer) * 8, 
-                                vy: Math.sin(angleToPlayer) * 8, 
-                                life: 100, damage: 15, isEnemy: true, size: 6, color: e.color 
-                            });
+                        if (typeof bulletSystem !== 'undefined') {
+                            bulletSystem.spawn(
+                                e.x, e.y,
+                                Math.cos(angleToPlayer) * 8,
+                                Math.sin(angleToPlayer) * 8,
+                                100, 15, true, 6, e.color
+                            );
                         }
                         e.state = 2; 
                         e.timer = 0;
                     }
                 }
                 else if (e.state === 2) {
-                    e.x -= Math.cos(angleToPlayer) * e.speed * moveDir; 
-                    e.y -= Math.sin(angleToPlayer) * e.speed * moveDir;
+                    e.x -= Math.cos(angleToPlayer) * e.speed * moveDir * timeScale; 
+                    e.y -= Math.sin(angleToPlayer) * e.speed * moveDir * timeScale;
                     if (e.timer > 60) e.state = 0;
                 }
                 break;
 
             case 'fragment':
-                e.timer++;
+                e.timer += 1 * timeScale;
                 const wave = Math.sin(e.timer * 0.1) * 2;
-                e.x += (Math.cos(angleToPlayer) * e.speed) - (Math.sin(angleToPlayer) * wave);
-                e.y += (Math.sin(angleToPlayer) * e.speed) + (Math.cos(angleToPlayer) * wave);
+                const forward = e.speed * timeScale;
+                e.x += (Math.cos(angleToPlayer) * forward) - (Math.sin(angleToPlayer) * wave * timeScale);
+                e.y += (Math.sin(angleToPlayer) * forward) + (Math.cos(angleToPlayer) * wave * timeScale);
                 e.angle = angleToPlayer;
                 break;
 
             case 'weaver':
-                e.timer++;
-                e.x += Math.cos(angleToPlayer + Math.sin(e.timer * 0.05)) * e.speed * moveDir;
-                e.y += Math.sin(angleToPlayer + Math.cos(e.timer * 0.05)) * e.speed * moveDir;
+                e.timer += 1 * timeScale;
+                e.x += Math.cos(angleToPlayer + Math.sin(e.timer * 0.05)) * e.speed * moveDir * timeScale;
+                e.y += Math.sin(angleToPlayer + Math.cos(e.timer * 0.05)) * e.speed * moveDir * timeScale;
                 e.angle = angleToPlayer;
                 
-                if (e.timer % 60 === 0) {
-                    if (typeof bullets !== 'undefined') {
-                        bullets.push({ 
-                            x: e.x, y: e.y, 
-                            vx: 0, vy: 0, 
-                            life: 180, damage: 10, isEnemy: true, size: 8, color: '#2ecc71' 
-                        });
+                if (Math.floor(e.timer) % 60 === 0) {
+                    if (typeof bulletSystem !== 'undefined') {
+                        bulletSystem.spawn(e.x, e.y, 0, 0, 180, 10, true, 8, '#2ecc71');
                     }
                 }
                 break;
 
             case 'nova':
-                e.timer++;
+                e.timer += 1 * timeScale;
                 const pulse = 1 + Math.sin(e.timer * 0.2) * 0.2;
                 e.currentSize = e.size * pulse;
-                e.x += Math.cos(angleToPlayer) * e.speed * moveDir;
-                e.y += Math.sin(angleToPlayer) * e.speed * moveDir;
+                e.x += Math.cos(angleToPlayer) * e.speed * moveDir * timeScale;
+                e.y += Math.sin(angleToPlayer) * e.speed * moveDir * timeScale;
                 e.angle = angleToPlayer;
                 break;
         }
@@ -189,15 +184,15 @@ const enemySystem = {
 
     handleDeath: function(e, index) {
         if (e.type === 'nova') {
-            if (typeof bullets !== 'undefined') {
+            if (typeof bulletSystem !== 'undefined') {
                 for(let k=0; k<8; k++) {
                     const ang = (Math.PI * 2 / 8) * k;
-                    bullets.push({ 
-                        x: e.x, y: e.y, 
-                        vx: Math.cos(ang) * 5, 
-                        vy: Math.sin(ang) * 5, 
-                        life: 60, damage: 15, isEnemy: true, size: 6, color: e.color 
-                    });
+                    bulletSystem.spawn(
+                        e.x, e.y,
+                        Math.cos(ang) * 5,
+                        Math.sin(ang) * 5,
+                        60, 15, true, 6, e.color
+                    );
                 }
             }
         }
@@ -208,7 +203,6 @@ const enemySystem = {
     getClosest: function(position) {
         let closest = null;
         let minDist = Infinity;
-        // Otimização: Não checar inimigos muito longe
         this.enemies.forEach(e => { 
             if (Math.abs(position.x - e.x) < 600 && Math.abs(position.y - e.y) < 600) {
                 const dist = Math.hypot(position.x - e.x, position.y - e.y); 
@@ -222,7 +216,6 @@ const enemySystem = {
     },
 
     draw: function(ctx, playerRef) {
-        // Culling: define a área visível da câmera (com margem)
         const camX = typeof camera !== 'undefined' ? camera.x : 0;
         const camY = typeof camera !== 'undefined' ? camera.y : 0;
         const viewW = ctx.canvas.width;
@@ -230,7 +223,6 @@ const enemySystem = {
         const margin = 100;
 
         this.enemies.forEach(e => {
-            // OTIMIZAÇÃO: Não desenhar se estiver fora da tela
             if (e.x < camX - margin || e.x > camX + viewW + margin ||
                 e.y < camY - margin || e.y > camY + viewH + margin) {
                 return;
@@ -240,15 +232,13 @@ const enemySystem = {
             ctx.translate(e.x, e.y);
             ctx.rotate(e.angle); 
             
-            // ShadowBlur é MUITO pesado. Removemos para inimigos normais para ganhar FPS.
-            // Apenas ligamos se ele estiver levando dano (flash)
             if (e.flashTimer > 0) {
                 ctx.fillStyle = '#fff';
                 ctx.shadowBlur = 15; 
                 ctx.shadowColor = '#fff';
             } else {
                 ctx.fillStyle = e.color;
-                ctx.shadowBlur = 0; // Desativa glow padrão
+                ctx.shadowBlur = 0; 
                 ctx.strokeStyle = e.color;
             }
 
@@ -258,7 +248,6 @@ const enemySystem = {
                 ctx.arc(0, 0, e.size, 0, Math.PI * 2);
                 ctx.fill();
                 
-                // Detalhe simples sem stroke pesado
                 ctx.fillStyle = '#000';
                 ctx.beginPath(); ctx.arc(6, -5, 2.5, 0, Math.PI*2); ctx.fill(); 
                 ctx.beginPath(); ctx.arc(6, 5, 2.5, 0, Math.PI*2); ctx.fill();
@@ -291,7 +280,6 @@ const enemySystem = {
                 ctx.fill();
             }
             else if (e.type === 'weaver') {
-                // Desenho simplificado para performance
                 ctx.beginPath();
                 for (let k = 0; k < 6; k++) {
                     const ang = k * Math.PI / 3;

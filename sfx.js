@@ -3,10 +3,10 @@ let audioCtx;
 let masterGain;
 
 const TRACKS = [
-    "https://files.catbox.moe/qzmnih.mp3",
-    "https://files.catbox.moe/d3vit9.mp3",
-    "https://files.catbox.moe/pip6g7.mp3",
-    "https://files.catbox.moe/hwvj7d.mp3" 
+    "./track01.mp3",
+    "./track02.mp3",
+    "./track03.mp3",
+    "./bosstrack01.mp3" 
 ];
 
 const BGM_VOL = 0.2;
@@ -49,7 +49,12 @@ const sfx = {
             audioCtx.resume();
         }
         
-        Object.values(musicLibrary).forEach(audio => audio.play().catch(e => {}));
+        Object.values(musicLibrary).forEach(audio => {
+            const playPromise = audio.play();
+            if (playPromise !== undefined) {
+                playPromise.catch(error => {});
+            }
+        });
         
         hasUnlockedAudio = true;
         sfx.playTrack(0);

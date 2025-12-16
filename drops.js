@@ -123,10 +123,10 @@ function trySpawnDrop(x, y) {
     dropSystem.activeDrops.push({ x: x, y: y, type: selected, life: 2500, bobOffset: Math.random() * Math.PI * 2 });
 }
 
-function updateDrops(playerRef) {
+function updateDrops(playerRef, timeScale = 1) {
     for (let i = dropSystem.activeDrops.length - 1; i >= 0; i--) {
         const d = dropSystem.activeDrops[i];
-        d.life--;
+        d.life -= 1 * timeScale;
         const dist = Math.hypot(playerRef.x - d.x, playerRef.y - d.y);
         
         if (dist < playerRef.size * 2.5) { 
@@ -136,13 +136,16 @@ function updateDrops(playerRef) {
             continue;
         }
 
-        if (dist < 150) { d.x += (playerRef.x - d.x) * 0.12; d.y += (playerRef.y - d.y) * 0.12; }
+        if (dist < 150) { 
+            d.x += (playerRef.x - d.x) * 0.12 * timeScale; 
+            d.y += (playerRef.y - d.y) * 0.12 * timeScale; 
+        }
         if (d.life <= 0) dropSystem.activeDrops.splice(i, 1);
     }
 
     for (let i = dropSystem.activeBuffs.length - 1; i >= 0; i--) {
         const buff = dropSystem.activeBuffs[i];
-        buff.timer--;
+        buff.timer -= 1 * timeScale;
         if (buff.timer <= 0) {
             if (buff.def.onEnd) buff.def.onEnd(playerRef);
             createFloatText(playerRef.x, playerRef.y, `${buff.def.name} END`, '#fff');
@@ -246,9 +249,9 @@ function drawBuffFX(ctx, p) {
 }
 
 function spawnExplosion(x, y, color, count) {
-    if (typeof particles !== 'undefined') {
+    if (typeof particleSystem !== 'undefined') {
         for(let i=0; i<count; i++) {
-            particles.push({ x: x, y: y, color: color, vx: (Math.random()-0.5)*10, vy: (Math.random()-0.5)*10, life: 40, size: 3 });
+             particleSystem.spawn(x, y, color, 3, 40, (Math.random()-0.5)*10, (Math.random()-0.5)*10, false);
         }
     }
 }
