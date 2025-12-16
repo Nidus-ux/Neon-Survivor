@@ -364,7 +364,8 @@
     const shockwaves = [], backgroundParticles = [];
     const keys = {};
 
-    let lastTime = 0;
+    let lastTime = performance.now();
+    let lastFpsTime = 0;
     let frameCount = 0;
     const fpsCounter = document.getElementById('fps-counter');
     let isFpsVisible = false;
@@ -872,11 +873,10 @@
         ctx.restore();
 
         frameCount++;
-        if (deltaTime >= 1000) {
-            const fps = Math.round((frameCount * 1000) / deltaTime);
-            fpsCounter.textContent = `${fps} FPS`;
+        if (currentTime - lastFpsTime >= 1000) {
+            fpsCounter.textContent = `${frameCount} FPS`;
             frameCount = 0;
-            lastTime = currentTime;
+            lastFpsTime = currentTime;
         }
     }
     
