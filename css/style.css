@@ -1,0 +1,109 @@
+body { margin: 0; background-color: #050011; overflow: hidden; font-family: 'Press Start 2P', cursive; color: white; user-select: none; -webkit-tap-highlight-color: transparent; }
+::-webkit-scrollbar { width: 6px; }
+::-webkit-scrollbar-track { background: #050011; }
+::-webkit-scrollbar-thumb { background: #444; border-radius: 3px; }
+.font-smooth { font-family: 'Roboto', sans-serif; }
+#game-container { position: relative; width: 100vw; height: 100vh; filter: contrast(1.1) saturate(1.2); background: #050011; }
+canvas { display: block; width: 100%; height: 100%; }
+#hud { display: none; position: absolute; top: 20px; left: 20px; width: 350px; z-index: 10; pointer-events: none; text-transform: uppercase; font-family: 'Press Start 2P', cursive; }
+.hud-text { font-size: 10px; color: #ccc; margin-bottom: 5px; text-shadow: 2px 2px 0 #000; display: flex; justify-content: space-between; }
+.bar-wrap { width: 100%; height: 24px; background: #1a1a1a; border: 2px solid #333; margin-bottom: 15px; border-radius: 4px; overflow: hidden; box-shadow: 0 0 10px rgba(0,0,0,0.5); position: relative; }
+#hpBar { width: 100%; height: 100%; background: linear-gradient(90deg, #c0392b, #e74c3c); box-shadow: 0 0 15px #e74c3c; transition: width 0.1s; }
+#xpBar { width: 0%; height: 100%; background: linear-gradient(90deg, #2980b9, #3498db); box-shadow: 0 0 15px #3498db; transition: width 0.1s; }
+.bar-text { position: absolute; top: 0; left: 0; width: 100%; height: 100%; display: flex; align-items: center; justify-content: center; font-size: 10px; color: #fff; text-shadow: 1px 1px 0 #000; z-index: 5; font-family: 'Roboto', sans-serif; font-weight: bold; letter-spacing: 1px; }
+#uiLvl { color: #f1c40f; text-shadow: 0 0 10px #f1c40f; }
+#uiTime { color: #fff; font-size: 16px; margin-top: 5px; display: block; text-align: right; font-family: 'Press Start 2P', cursive; }
+.timer-frozen { color: #e74c3c !important; text-shadow: 2px 0 #fff, -2px 0 #fff !important; animation: glitch 0.2s infinite !important; }
+#pause-indicator { display: none; position: absolute; top: 20px; right: 20px; color: yellow; z-index: 15; font-size: 12px; animation: flicker 2s infinite; font-family: 'Press Start 2P', cursive; }
+#fps-counter { position: absolute; bottom: 10px; right: 10px; font-size: 12px; color: #0f0; text-shadow: 1px 1px 0 #000; z-index: 100; display: none; }
+@media (max-width: 900px) and (orientation: landscape) {
+    #hud { width: 40%; top: 10px; left: 10px; max-width: 250px; }
+    .hud-text { font-size: 8px; }
+    .bar-wrap { height: 16px !important; margin-bottom: 8px !important; border-width: 1px; }
+    #uiTime { font-size: 12px !important; }
+}
+.modal-screen { display: none; position: absolute; top: 0; left: 0; width: 100vw; height: 100vh; background: rgba(5, 5, 5, 0.95); backdrop-filter: blur(8px); flex-direction: column; justify-content: center; align-items: center; z-index: 20; }
+#startScreen { display: flex; z-index: 30; background: radial-gradient(circle at center, #1a0b2e 0%, #000000 100%); }
+#startScreen::before { content: ""; position: absolute; top: -50%; left: -50%; width: 200%; height: 200%; background: linear-gradient(rgba(0, 255, 255, 0.1) 1px, transparent 1px), linear-gradient(90deg, rgba(255, 0, 255, 0.1) 1px, transparent 1px); background-size: 100px 100px; transform: perspective(500px) rotateX(60deg); animation: moveGrid 10s linear infinite; pointer-events: none; z-index: -1; }
+.start-content { z-index: 10; display: flex; flex-direction: column; align-items: center; justify-content: center; padding: 40px; background: rgba(0, 0, 0, 0.8); border: 2px solid rgba(255, 255, 255, 0.1); border-radius: 20px; box-shadow: 0 0 50px rgba(0,0,0,0.8); }
+.title-neon { font-family: 'Press Start 2P', cursive; font-size: 50px; color: #fff; margin-bottom: 50px; text-align: center; line-height: 1.2; text-shadow: 0 0 10px #fff, 0 0 20px #0ff, 0 0 40px #0ff; animation: titleFloat 3s ease-in-out infinite; }
+input[type="text"] { background: transparent; border: none; border-bottom: 2px solid #555; padding: 15px; color: #f1c40f; font-family: 'Press Start 2P'; font-size: 18px; text-align: center; width: 300px; text-transform: uppercase; outline: none; transition: 0.3s; margin-bottom: 30px; letter-spacing: 2px; }
+input[type="text"]:focus { border-bottom-color: #f1c40f; box-shadow: 0 10px 20px -10px rgba(241, 196, 15, 0.3); transform: scale(1.05); }
+.btn-start { background: transparent; border: 3px solid #00ff00; color: #00ff00; padding: 20px 50px; font-family: 'Press Start 2P'; font-size: 20px; cursor: pointer; box-shadow: 0 0 15px rgba(0, 255, 0, 0.2); text-shadow: 0 0 10px #00ff00; animation: pulseCoin 0.8s infinite alternate; transition: 0.1s; touch-action: manipulation; }
+.btn-start:hover { background: #00ff00; color: #000; box-shadow: 0 0 40px #00ff00; animation: none; transform: scale(1.05); }
+.btn-rank { position: fixed; bottom: 30px; right: 30px; z-index: 40; width: 60px; height: 60px; background: rgba(0, 0, 0, 0.9); border: 2px solid #f1c40f; border-radius: 12px; color: #f1c40f; font-size: 24px; cursor: pointer; box-shadow: 0 0 15px rgba(241, 196, 15, 0.3); display: flex; justify-content: center; align-items: center; transition: 0.2s; font-family: 'Press Start 2P'; }
+.btn-rank:hover { background: #f1c40f; color: #000; box-shadow: 0 0 30px #f1c40f; transform: scale(1.1) rotate(5deg); }
+.leaderboard-container { width: 80%; max-width: 700px; max-height: 50vh; overflow-y: auto; border: 2px solid #444; background: #0a0a0a; margin: 20px 0; box-shadow: 0 0 30px rgba(0,0,0,0.8); }
+.lb-row { display: grid; grid-template-columns: 0.5fr 2fr 1.5fr 1fr; padding: 15px; border-bottom: 1px solid #222; align-items: center; font-size: 10px; transition: 0.2s; color: #aaa; touch-action: manipulation; }
+.lb-row:hover { background: #1a1a1a; color: #fff; border-left: 3px solid #f1c40f; }
+.lb-header { font-weight: bold; color: #f1c40f; background: #111; position: sticky; top: 0; z-index: 2; border-bottom: 2px solid #444; text-shadow: 0 0 5px rgba(241, 196, 15, 0.5); }
+.view-btn { background: #333; border: 1px solid #555; color: #ddd; padding: 6px 12px; cursor: pointer; font-size: 8px; font-family: 'Press Start 2P'; transition: 0.2s; }
+.view-btn:hover { background: #fff; color: #000; box-shadow: 0 0 10px #fff; }
+.btn-back { background: #c0392b; border: none; border-bottom: 4px solid #922b21; color: white; padding: 15px 30px; font-family: 'Press Start 2P'; font-size: 14px; cursor: pointer; margin-top: 20px; }
+.history-card { background: #181818; border-left: 4px solid #555; padding: 12px; border-radius: 4px; display: flex; flex-direction: column; gap: 6px; opacity: 0; animation: slideUp 0.3s forwards; }
+.history-card:hover { background: #222; transform: translateX(5px); }
+.hc-header { display: flex; justify-content: space-between; border-bottom: 1px solid #333; padding-bottom: 5px; font-size: 9px; color: #888; }
+.btn-close { position: absolute; top: 20px; right: 30px; background: transparent; border: 2px solid #e74c3c; color: #e74c3c; padding: 10px 20px; cursor: pointer; font-family: 'Press Start 2P'; font-size: 12px; transition: 0.2s; }
+.btn-close:hover { background: #e74c3c; color: #fff; }
+#detailsModal { display: none; position: absolute; top: 0; left: 0; width: 100%; height: 100%; background: #050505; flex-direction: column; align-items: center; z-index: 50; overflow-y: auto; }
+.card-container { display: flex; gap: 30px; flex-wrap: wrap; justify-content: center; padding-top: 20px; }
+.card { width: 260px; padding: 30px; border-radius: 12px; cursor: pointer; text-align: center; border: 2px solid #333; background: #151515; position: relative; overflow: hidden; box-shadow: 0 10px 30px rgba(0,0,0,0.8); touch-action: manipulation; opacity: 0; animation: cardEnter 0.5s cubic-bezier(0.34, 1.56, 0.64, 1) forwards; transition: all 0.2s cubic-bezier(0.25, 0.46, 0.45, 0.94); }
+.card::after { content: ''; position: absolute; top: 0; left: -150%; width: 150%; height: 100%; background: linear-gradient(90deg, transparent, rgba(255,255,255,0.1), transparent); transform: skewX(-20deg); transition: 0.5s; pointer-events: none; }
+.card:hover::after { left: 150%; transition: 0.7s; }
+.card h3 { font-family: 'Press Start 2P'; font-size: 12px; margin-bottom: 20px; color: #fff; min-height: 40px; display: flex; align-items: center; justify-content: center; text-transform: uppercase; text-shadow: 0 2px 4px rgba(0,0,0,0.8); line-height: 1.5; }
+.card p { font-family: 'Roboto', sans-serif; font-size: 14px; color: #aaa; line-height: 1.6; pointer-events: none; transition: color 0.2s; }
+.card:hover p { color: #fff; }
+.card.selected { animation: cardSelected 0.45s forwards cubic-bezier(0.175, 0.885, 0.32, 1.275) !important; z-index: 100; border-color: #fff !important; background: #fff !important; box-shadow: 0 0 60px #fff, inset 0 0 30px #fff !important; }
+.card.selected h3, .card.selected p { color: #000 !important; font-weight: bold; }
+.card.dimmed { opacity: 0.1; filter: blur(5px); transform: scale(0.9); pointer-events: none; transition: 0.4s; }
+.card.mythic { border: 2px solid #ff003c; background: #000; opacity: 1 !important; box-shadow: 0 0 15px #ff003c, inset 0 0 20px #ff003c; animation: cardEnter 0.5s ease-out forwards, mythicPulse 2s infinite; }
+.card.mythic::before { content: "SYSTEM_ERR"; position: absolute; top: 5px; right: 5px; font-size: 8px; color: #ff003c; font-family: 'Press Start 2P'; animation: textGlitch 0.5s infinite; }
+.card.mythic h3 { color: #fff; text-shadow: 3px 0 #ff003c, -3px 0 #00ffff; animation: textGlitch 0.2s infinite; font-size: 11px; }
+.card.mythic p { color: #ffcccc; font-weight: bold; }
+.card.mythic:hover { transform: scale(1.1) rotate(1deg) !important; box-shadow: 0 0 50px #ff003c !important; }
+@keyframes mythicPulse { 0% { box-shadow: 0 0 15px #ff003c; border-color: #ff003c; } 50% { box-shadow: 0 0 30px #ff003c; border-color: #fff; } 100% { box-shadow: 0 0 15px #ff003c; border-color: #ff003c; } }
+@keyframes cardSelected { 0% { transform: scale(1); } 40% { transform: scale(1.05); } 100% { transform: scale(1.4); opacity: 0; } }
+.card.common { border-bottom: 4px solid #95a5a6; }
+.card.common:hover { border-color: #bdc3c7; box-shadow: 0 0 30px rgba(189, 195, 199, 0.4); }
+.card.uncommon { border-bottom: 4px solid #2ecc71; }
+.card.uncommon:hover { border-color: #27ae60; box-shadow: 0 0 30px rgba(46, 204, 113, 0.5); }
+.card.epic { border-bottom: 4px solid #9b59b6; }
+.card.epic:hover { border-color: #8e44ad; box-shadow: 0 0 30px rgba(155, 89, 182, 0.6); }
+.card.legendary { border-bottom: 4px solid #f1c40f; background: linear-gradient(135deg, #151515, #1a1a0a); }
+.card.legendary:hover { border-color: #f39c12; box-shadow: 0 0 40px rgba(241, 196, 15, 0.8); transform: translateY(-12px) scale(1.1); }
+.card.legendary h3 { color: #f1c40f; text-shadow: 0 0 10px #f1c40f; }
+.btn-patch { position: fixed; bottom: 100px; right: 30px; z-index: 40; width: 60px; height: 60px; background: rgba(0, 0, 0, 0.9); border: 2px solid #00f3ff; border-radius: 12px; color: #00f3ff; font-size: 24px; cursor: pointer; box-shadow: 0 0 15px rgba(0, 243, 255, 0.3); display: flex; justify-content: center; align-items: center; transition: 0.2s; }
+.btn-patch:hover { background: #00f3ff; color: #000; box-shadow: 0 0 30px #00f3ff; transform: scale(1.1) rotate(-5deg); }
+#patchModal { display: none; z-index: 60; justify-content: center; align-items: center; position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; background: rgba(0,0,0,0.8); backdrop-filter: blur(5px); }
+.patch-outer { position: relative; padding: 4px; background: #111; overflow: hidden; border-radius: 20px; animation: cardEnter 0.6s ease-out; width: 90%; max-width: 750px; margin: auto; }
+.patch-outer::before { content: ''; position: absolute; width: 150%; height: 150%; background: conic-gradient(#ff00ff, #00ffff, #ff00ff); top: -25%; left: -25%; animation: borderRotate 4s linear infinite; }
+.patch-container { position: relative; background: #0a0a0f; background-image: linear-gradient(rgba(0, 255, 255, 0.05) 1px, transparent 1px), linear-gradient(90deg, rgba(255, 0, 255, 0.05) 1px, transparent 1px); background-size: 50px 50px; border-radius: 18px; padding: 40px; max-height: 80vh; overflow-y: auto; z-index: 2; border: 1px solid rgba(255, 255, 255, 0.1); }
+.patch-header { text-align: center; border-bottom: 1px solid rgba(0, 255, 255, 0.2); padding-bottom: 20px; margin-bottom: 30px; position: relative; text-shadow: 0 0 10px rgba(255, 0, 255, 0.5); }
+.patch-title { font-family: 'Press Start 2P', cursive; font-size: 20px; color: #fff; letter-spacing: 2px; line-height: 1.5; }
+.patch-date { font-family: 'Roboto'; color: #00f3ff; font-size: 10px; margin-top: 15px; display: block; letter-spacing: 2px; text-transform: uppercase; }
+.patch-section { margin-bottom: 35px; opacity: 0; animation: slideUp 0.5s forwards; }
+.patch-sec-title { font-family: 'Press Start 2P'; color: #ff00ff; font-size: 10px; margin-bottom: 15px; display: flex; align-items: center; gap: 10px; }
+.patch-sec-title::after { content:''; flex:1; height:1px; background: rgba(255,0,255,0.2); }
+.patch-list { list-style: none; padding-left: 20px; font-family: 'Roboto'; font-size: 14px; color: #bbb; line-height: 1.8; }
+.patch-list li { margin-bottom: 12px; padding-bottom: 8px; border-bottom: 1px solid rgba(255,255,255,0.05); }
+.patch-list li::before { content: '»'; color: #00ffff; margin-right: 15px; font-weight: bold; }
+.tag-new { font-family: 'Press Start 2P'; font-size: 8px; margin-right: 12px; background: linear-gradient(90deg, #ff0000, #ffff00, #00ff00, #00ffff, #0000ff, #ff00ff, #ff0000); background-size: 400%; background-clip: text; -webkit-background-clip: text; color: transparent; animation: rainbowFlow 3s linear infinite; font-weight: bold; }
+.patch-close { width: 100%; padding: 20px; background: #111; border: 2px solid #00ff00; color: #00ff00; font-family: 'Press Start 2P'; cursor: pointer; transition: 0.2s; margin-top: 20px; text-shadow: 0 0 5px #00ff00; }
+.patch-close:hover { background: #00ff00; color: #000; box-shadow: 0 0 30px #00ff00; }
+@keyframes borderRotate { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }
+@keyframes scanLine { 0% { transform: translateX(-100%); } 100% { transform: translateX(100%); } }
+@keyframes rainbowFlow { 0% { background-position: 0%; } 100% { background-position: 400%; } }
+@keyframes textGlitch { 0% { transform: skew(0deg); } 20% { transform: skew(-2deg); } 40% { transform: skew(2deg); } 60% { transform: skew(0deg); opacity: 1; } 61% { opacity: 0.8; } 62% { opacity: 1; } 100% { transform: skew(0deg); } }
+@keyframes panelGlitch { 0% { border-color: #ff00ff; } 98% { border-color: #ff00ff; box-shadow: 0 0 20px rgba(255, 0, 255, 0.2); } 99% { border-color: #fff; box-shadow: 0 0 50px #fff; } 100% { border-color: #ff00ff; } }
+@keyframes moveGrid { 0% { background-position: 0 0; } 100% { background-position: 0 100px; } }
+@keyframes flicker { 0%,100% { opacity:1; } 50% { opacity:0.5; } }
+@keyframes titleFloat { 0%,100% { transform: translateY(0); text-shadow: 0 0 10px #fff, 0 0 20px #0ff; } 50% { transform: translateY(-5px); text-shadow: 0 0 15px #fff, 0 0 30px #0ff; } }
+@keyframes pulseCoin { 0% { transform: scale(1); opacity: 1; } 100% { transform: scale(0.95); opacity: 0.8; } }
+@keyframes cardEnter { from { opacity: 0; transform: translateY(50px) scale(0.8); } to { opacity: 1; transform: translateY(0) scale(1); } }
+@keyframes slideUp { from { opacity:0; transform: translateY(20px); } to { opacity:1; transform: translateY(0); } }
+@keyframes shake { 0% { transform: translate(0, 0); } 25% { transform: translate(-3px, 3px); } 50% { transform: translate(3px, -3px); } 75% { transform: translate(-3px, -3px); } 100% { transform: translate(0, 0); } }
+.shaking { animation: shake 0.2s cubic-bezier(.36,.07,.19,.97) both; filter: chromatic-aberration 1; }
+#damage-overlay { position: absolute; top: 0; left: 0; width: 100%; height: 100%; background: radial-gradient(circle, transparent 60%, rgba(255, 0, 0, 0.0) 100%); pointer-events: none; transition: background 0.1s; z-index: 5; }
+.hurt-effect { background: radial-gradient(circle, transparent 40%, rgba(255, 0, 0, 0.4) 100%) !important; }
+.glitch-canvas { animation: glitch 0.2s linear; }
+@keyframes glitch { 0% { transform: translate(2px,0); } 25% { transform: translate(-2px,2px); } 50% { transform: translate(-2px,-2px); } 75% { transform: translate(2px,2px); } 100% { transform: translate(0); } }
